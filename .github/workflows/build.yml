@@ -1,0 +1,44 @@
+name: Build Tippecanoe
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tippecanoe version (tag or branch)'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Tippecanoe source
+        uses: actions/checkout@v4
+        with:
+          repository: mapbox/tippecanoe
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
+
+      - name: Build Tippecanoe
+        run: |
+          make -j$(nproc)
+
+      - name: Run tests (optional)
+        run: |
+          make test
+
+      - name: Install to temporary directory
+        run: |
+          make install PREFIX=${{ github.workspace }}/install
+
+      - name: Upload binaries as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tippecanoe-${{ github.event.inputs.version || 'latest' }}
+          path: ${{ github.workspace }}/install/bin/
